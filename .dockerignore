@@ -1,0 +1,25 @@
+# 构建镜像时排除的东西 —— 关键是把「本机虚拟环境」和「运行时数据」挡在外面。
+# venv/ 有几百 MB 且是 Windows 平台的二进制，拷进 Linux 镜像会直接坏掉；data/ 是运行时数据，不该进镜像。
+
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+data/
+logs*.txt
+
+.env
+.env.local
+
+scripts/*.txt
+scripts/*.log
+celerybeat-schedule*
+
+.git/
+.gitignore
+README.md
+Dockerfile
+docker-compose.yml
+deploy/

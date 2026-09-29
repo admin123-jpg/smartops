@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>巡检报告 #{{ run.id }} - {{ run.template_name }}</title>
+<style>
+  :root { --ok:#1a7f37; --warn:#bf8700; --crit:#cf222e; --bg:#f6f8fa; --line:#d0d7de; }
+  * { box-sizing: border-box; }
+  body { font-family: "Microsoft YaHei", -apple-system, "Segoe UI", sans-serif; margin:0; padding:32px; background:var(--bg); color:#24292f; }
+  .wrap { max-width: 1080px; margin:0 auto; background:#fff; border:1px solid var(--line); border-radius:8px; padding:32px; }
+  h1 { font-size:22px; margin:0 0 6px; }
+  .sub { color:#57606a; font-size:13px; margin-bottom:20px; }
+  .cards { display:flex; gap:12px; margin:20px 0 26px; flex-wrap:wrap; }
+  .card { flex:1 1 150px; border:1px solid var(--line); border-radius:6px; padding:14px 16px; }
+  .card .n { font-size:24px; font-weight:700; }
+  .card .t { font-size:12px; color:#57606a; margin-top:2px; }
+  .card.c-ok .n { color:var(--ok); }
+  .card.c-warn .n { color:var(--warn); }
+  .card.c-crit .n { color:var(--crit); }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th, td { border:1px solid var(--line); padding:8px 10px; text-align:left; vertical-align:top; }
+  th { background:#f6f8fa; font-weight:600; }
+  tr.lv-warn { background:#fff8c5; }
+  tr.lv-critical, tr.lv-error { background:#ffebe9; }
+  .tag { display:inline-block; padding:1px 8px; border-radius:10px; font-size:12px; color:#fff; }
+  .tag.ok { background:var(--ok); } .tag.warn { background:var(--warn); } .tag.critical, .tag.error { background:var(--crit); }
+  .ai { margin:24px 0; border:1px solid #a5c8ff; background:#ddf4ff; border-radius:6px; padding:16px 18px; white-space:pre-wrap; font-size:13px; line-height:1.7; }
+  .ai h2 { font-size:15px; margin:0 0 10px; }
+  .fix { color:#0969da; text-decoration:none; border-bottom:1px dashed #0969da; }
+  .foot { margin-top:26px; color:#57606a; font-size:12px; border-top:1px solid var(--line); padding-top:14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>自动化巡检报告</h1>
+  <div class="sub">
+    巡检模板：<strong>{{ run.template_name }}</strong>　|　批次：#{{ run.id }}　|　
+    触发方式：{{ '定时任务' if run.trigger == 'cron' else '手动触发' }}　|　
+    执行人：{{ run.operator or 'system' }}　|　生成时间：{{ generated_at }}
+  </div>
+
+  <div class="cards">
+    <div class="card"><div class="n">{{ run.total_items }}</div><div class="t">检查项总数</div></div>
+    <div class="card c-ok"><div class="n">{{ run.ok_items }}</div><div class="t">正常</div></div>
+    <div class="card c-warn"><div class="n">{{ run.warn_items }}</div><div class="t">警告</div></div>
+    <div class="card c-crit"><div class="n">{{ run.critical_items }}</div><div class="t">严重 / 异常</div></div>
+  </div>
+
+  {% if run.ai_summary %}
+  <div class="ai">
+    <h2>AI 巡检结论</h2>{{ run.ai_summary }}
+  </div>
+  {% endif %}
+
+  <table>
+    <thead>
+      <tr><th style="width:150px">资产</th><th style="width:120px">检查项</th>
+          <th style="width:70px">等级</th><th style="width:90px">实测值</th><th>说明与修复建议</th></tr>
+    </thead>
+    <tbody>
+    {% for r in rows %}
+      <tr class="lv-{{ r.level }}">
+        <td>{{ r.asset_label }}</td>
+        <td>{{ r.item_name }}</td>
+        <td><span class="tag {{ r.level }}">{{ r.level }}</span></td>
+        <td>{{ r.value }}</td>
+        <td>
+          {{ r.message }}
+          {% if r.level != level_ok %}
+            <br><a class="fix" href="/assets?focus={{ r.asset_id }}">→ 跳转到该主机执行修复</a>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="foot">
+    本报告由 SmartOps Assistant 自动生成。异常项已按严重程度着色：黄色为警告，红色为严重/异常。
+    修复建议部分由大模型基于「本次实测数据」生成，执行前请确认影响面。
+  </div>
+</div>
+</body>
+</html>

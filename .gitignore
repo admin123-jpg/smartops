@@ -1,0 +1,37 @@
+# ---------------- 虚拟环境 ----------------
+# venv/ 是 Windows 平台的二进制，提交上去对别人毫无用处，还占几十 MB
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# ---------------- 运行期数据（重要）----------------
+# data/ 里的 SQLite 库存着「纳管资产的 SSH 账号密码」，
+# 提交上去等于把内网机器凭据公开，绝对不能进仓库。
+data/
+*.db
+*.sqlite3
+
+# ---------------- 本地配置 ----------------
+.env
+.env.local
+
+# ---------------- 脚本产出 ----------------
+scripts/*.txt
+scripts/*.log
+logs_*.txt
+*.log
+
+# ---------------- 打包产物 ----------------
+build/
+dist/
+
+# ---------------- 编辑器 / 系统 ----------------
+.vscode/
+.idea/
+.celerybeat-schedule
+celerybeat-schedule*
+.DS_Store
+Thumbs.db

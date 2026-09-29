@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SmartOps Assistant · 智能运维平台</title>
+<style>
+:root{
+  --bg:#0d1117; --panel:#161b22; --panel2:#1c2230; --line:#30363d;
+  --fg:#e6edf3; --fg2:#9da7b3; --fg3:#6e7681;
+  --blue:#388bfd; --green:#3fb950; --amber:#d29922; --red:#f85149; --teal:#2dd4bf;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Microsoft YaHei",-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--fg);font-size:13px}
+button{font-family:inherit;cursor:pointer;border:none;border-radius:6px;padding:7px 14px;font-size:13px;background:var(--blue);color:#fff}
+button:hover{opacity:.88}
+button.ghost{background:transparent;border:1px solid var(--line);color:var(--fg2)}
+button.danger{background:var(--red)}
+input,select,textarea{font-family:inherit;font-size:13px;background:var(--panel2);border:1px solid var(--line);border-radius:6px;color:var(--fg);padding:7px 10px;outline:none;width:100%}
+input:focus,textarea:focus{border-color:var(--blue)}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--fg2);font-weight:500;background:var(--panel2);position:sticky;top:0}
+tr:hover td{background:rgba(56,139,253,.06)}
+.hidden{display:none!important}
+
+#login{display:flex;align-items:center;justify-content:center;height:100vh}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:26px;width:360px}
+.card h1{font-size:17px;font-weight:500;margin-bottom:4px}
+.card p{color:var(--fg3);font-size:12px;margin-bottom:18px}
+.card .row{margin-bottom:12px}
+.card label{display:block;color:var(--fg2);font-size:12px;margin-bottom:5px}
+
+#app{display:none;min-height:100vh}
+header{display:flex;align-items:center;gap:20px;padding:0 22px;height:54px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
+header .logo{font-size:14px;font-weight:500}
+header .logo span{color:var(--blue)}
+nav{display:flex;gap:2px;flex:1}
+nav a{padding:7px 13px;border-radius:6px;color:var(--fg2);text-decoration:none;font-size:13px}
+nav a:hover{background:var(--panel2);color:var(--fg)}
+nav a.on{background:rgba(56,139,253,.15);color:var(--blue)}
+#who{color:var(--fg3);font-size:12px}
+
+main{padding:20px 22px 40px}
+.page{display:none}
+.page.on{display:block}
+h2{font-size:15px;font-weight:500;margin-bottom:14px;display:flex;align-items:center;gap:10px}
+h2 small{color:var(--fg3);font-weight:400;font-size:12px}
+
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.stat .n{font-size:23px;font-weight:500}
+.stat .t{color:var(--fg2);font-size:12px;margin-top:3px}
+.n.ok{color:var(--green)}.n.warn{color:var(--amber)}.n.bad{color:var(--red)}.n.info{color:var(--blue)}
+
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;margin-bottom:16px;overflow:hidden}
+.panel>.hd{padding:11px 16px;border-bottom:1px solid var(--line);color:var(--fg2);font-size:12.5px;display:flex;justify-content:space-between;align-items:center}
+.panel>.bd{padding:16px}
+.scroll{max-height:420px;overflow:auto}
+
+.bar{display:flex;gap:10px;align-items:flex-end;margin-bottom:14px;flex-wrap:wrap}
+.bar .f{min-width:150px}
+.bar .f label{display:block;color:var(--fg2);font-size:12px;margin-bottom:4px}
+.toolbar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+
+.tag{display:inline-block;padding:1px 8px;border-radius:10px;font-size:11.5px;line-height:18px}
+.tag.ok{background:rgba(63,185,80,.18);color:var(--green)}
+.tag.warn{background:rgba(210,153,34,.18);color:var(--amber)}
+.tag.critical,.tag.error,.tag.failed{background:rgba(248,81,73,.18);color:var(--red)}
+.tag.running,.tag.pending{background:rgba(56,139,253,.18);color:var(--blue)}
+.tag.success,.tag.finished,.tag.resolved{background:rgba(63,185,80,.18);color:var(--green)}
+.tag.info,.tag.readonly{background:rgba(157,167,179,.18);color:var(--fg2)}
+
+pre{background:#0b0f14;border:1px solid var(--line);border-radius:6px;padding:10px;font-family:Consolas,Monaco,monospace;font-size:12px;line-height:1.6;white-space:pre-wrap;word-break:break-all;max-height:220px;overflow:auto;color:#c9d1d9}
+.ai-box{background:rgba(56,139,253,.08);border:1px solid rgba(56,139,253,.35);border-radius:8px;padding:13px;margin-top:10px;white-space:pre-wrap;line-height:1.75;font-size:12.5px}
+.hint{color:var(--fg3);font-size:12px}
+.empty{color:var(--fg3);text-align:center;padding:26px;font-size:12.5px}
+.toast{position:fixed;right:20px;bottom:20px;background:var(--panel2);border:1px solid var(--line);border-left:3px solid var(--blue);border-radius:8px;padding:12px 16px;font-size:12.5px;max-width:380px;z-index:99;white-space:pre-wrap}
+.toast.err{border-left-color:var(--red)}
+.toast.ok{border-left-color:var(--green)}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;z-index:50}
+.modal .card{width:640px;max-height:86vh;overflow:auto}
+</style>
+</head>
+<body>
+
+<div id="login">
+  <div class="card">
+    <h1>SmartOps Assistant</h1>
+    <p>轻量级智能运维平台 · 资产管理 / 批量执行 / 巡检 / 告警 / AI 诊断</p>
+    <div class="row"><label>用户名</label><input id="u" value="admin"></div>
+    <div class="row"><label>密码</label><input id="p" type="password" value="admin123"
+      onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <button style="width:100%" onclick="doLogin()">登录</button>
+    <p style="margin-top:14px;margin-bottom:0">
+      演示账号：admin/admin123（管理员）· ops/ops123（运维）· viewer/view123（只读）
+    </p>
+  </div>
+</div>
+
+<div id="app">
+  <header>
+    <div class="logo">Smart<span>Ops</span></div>
+    <nav>
+      <a data-p="overview" class="on">总览</a>
+      <a data-p="assets">资产管理</a>
+      <a data-p="exec">批量执行</a>
+      <a data-p="inspect">自动化巡检</a>
+      <a data-p="alerts">告警聚合</a>
+      <a data-p="logs">日志分析</a>
+      <a data-p="cicd">CI/CD</a>
+    </nav>
+    <span id="who"></span>
+    <button class="ghost" onclick="logout()">退出</button>
+  </header>
+  <main>
+
+    <section class="page on" id="p-overview">
+      <h2>总览 <small id="sysline"></small></h2>
+      <div class="cards" id="ov-cards"></div>
+      <div class="panel">
+        <div class="hd">磁盘水位 Top 5<span class="hint">按使用率倒序</span></div>
+        <div class="bd" id="ov-disk"></div>
+      </div>
+      <div class="panel">
+        <div class="hd">AI 能力状态<span class="hint" id="ai-hint"></span></div>
+        <div class="bd" id="ov-ai"></div>
+      </div>
+    </section>
+
+    <section class="page" id="p-assets">
+      <h2>资产管理 <small>录入服务器 → SSH 探测 → 变更留痕</small></h2>
+      <div class="toolbar">
+        <button onclick="showAssetForm()">+ 录入资产</button>
+        <button class="ghost" onclick="probeAll()">批量探测</button>
+        <button class="ghost" onclick="loadAssets()">刷新</button>
+      </div>
+      <div class="panel"><div class="scroll"><table id="asset-table"></table></div></div>
+    </section>
+
+    <section class="page" id="p-exec">
+      <h2>批量执行 <small>选多台 → 下发命令 → WebSocket 实时回传每台结果</small></h2>
+      <div class="panel">
+        <div class="bd">
+          <div class="bar">
+            <div class="f" style="flex:1;min-width:420px">
+              <label>要执行的命令</label>
+              <input id="ex-cmd" value="df -h / && free -m | head -2">
+            </div>
+            <button onclick="runBatch()">执行</button>
+            <button class="ghost" onclick="pickAll('ex-assets')">全选在线</button>
+          </div>
+          <div class="hint" style="margin-bottom:8px">命中高危关键词（rm -rf / mkfs / shutdown 等）会要求二次确认</div>
+          <div id="ex-assets" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="hd"><span>实时结果</span><span id="ex-progress" class="hint"></span></div>
+        <div class="bd scroll" id="ex-result"><div class="empty">还没有执行任务</div></div>
+      </div>
+      <div class="panel">
+        <div class="hd">执行历史</div>
+        <div class="scroll"><table id="task-table"></table></div>
+      </div>
+    </section>
+
+    <section class="page" id="p-inspect">
+      <h2>自动化巡检 <small>一键/定时巡检 → 异常高亮 → HTML 报告 + AI 结论</small></h2>
+      <div class="toolbar">
+        <button onclick="runInspect()">立即巡检全部在线资产</button>
+        <button class="ghost" onclick="loadRuns()">刷新历史</button>
+      </div>
+      <div class="panel"><div class="scroll"><table id="run-table"></table></div></div>
+    </section>
+
+    <section class="page" id="p-alerts">
+      <h2>告警聚合 <small>Webhook 接入 + Redis 去重 + AI 根因 + 多渠道通知</small></h2>
+      <div class="cards" id="al-cards"></div>
+      <div class="toolbar">
+        <button onclick="mockAlert()">生成模拟告警（无需 Prometheus）</button>
+        <button class="ghost" onclick="loadAlerts()">刷新</button>
+      </div>
+      <div class="panel"><div class="scroll"><table id="alert-table"></table></div></div>
+    </section>
+
+    <section class="page" id="p-logs">
+      <h2>日志分析 <small>Nginx Top IP / 慢请求 · 通用日志归一化聚合 · 可选 AI 根因</small></h2>
+      <div class="panel">
+        <div class="bd">
+          <div class="bar">
+            <div class="f" style="flex:1;min-width:300px">
+              <label>远程路径（从被管服务器 SFTP 拉取）</label>
+              <input id="lg-path" value="/var/log/messages">
+            </div>
+            <div class="f"><label>目标资产</label><select id="lg-asset"></select></div>
+            <button onclick="analyzeRemote()">拉取并分析</button>
+            <button class="ghost" onclick="demoLog()">用示例 Nginx 日志</button>
+          </div>
+        </div>
+      </div>
+      <div class="panel"><div class="bd" id="lg-result"><div class="empty">还没有分析结果</div></div></div>
+    </section>
+
+    <section class="page" id="p-cicd">
+      <h2>CI/CD 集成 <small>GitLab 流水线 · Jenkins 作业（未配置时优雅关闭）</small></h2>
+      <div class="panel"><div class="bd" id="ci-status"></div></div>
+      <div class="panel"><div class="hd">GitLab 流水线</div><div class="bd" id="ci-gitlab"></div></div>
+      <div class="panel"><div class="hd">Jenkins 作业</div><div class="bd" id="ci-jenkins"></div></div>
+    </section>
+
+  </main>
+</div>
+
+<div id="modal"></div>
+
+<script>
+let TOKEN = localStorage.getItem('so_token') || '';
+let ME = null;
+const API = '';
+
+async function api(path, opt = {}) {
+  const o = Object.assign({}, opt);
+  o.headers = Object.assign({'Content-Type': 'application/json'}, o.headers || {});
+  if (TOKEN) o.headers['Authorization'] = 'Bearer ' + TOKEN;
+  if (o.body && typeof o.body !== 'string') o.body = JSON.stringify(o.body);
+  const r = await fetch(API + path, o);
+  let j;
+  try { j = await r.json(); } catch (e) { throw new Error('HTTP ' + r.status); }
+  if (r.status === 401) { logout(); throw new Error(j.message || '未登录'); }
+  if (j.code !== 0) throw new Error(j.message || ('错误 ' + j.code));
+  return j.data;
+}
+
+function toast(msg, kind) {
+  const d = document.createElement('div');
+  d.className = 'toast ' + (kind || '');
+  d.textContent = msg;
+  document.body.appendChild(d);
+  setTimeout(() => d.remove(), 4200);
+}
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function lvl(l) { return '<span class="tag ' + l + '">' + l + '</span>'; }
+
+async function doLogin() {
+  try {
+    const d = await api('/api/auth/login', {method: 'POST', body: {username: document.getElementById('u').value, password: document.getElementById('p').value}});
+    TOKEN = d.access_token; localStorage.setItem('so_token', TOKEN);
+    ME = {username: d.username, role: d.role};
+    enterApp();
+  } catch (e) { toast(e.message, 'err'); }
+}
+function logout() {
+  TOKEN = ''; localStorage.removeItem('so_token');
+  document.getElementById('login').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+}
+async function enterApp() {
+  if (!ME) { try { ME = await api('/api/auth/me'); } catch (e) { return; } }
+  document.getElementById('login').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('who').textContent = ME.username + ' · ' + ME.role;
+  loadOverview(); loadAssets(); loadTasks(); loadRuns(); loadAlerts(); loadCicdStatus();
+}
+
+document.querySelectorAll('nav a').forEach(a => a.onclick = () => {
+  document.querySelectorAll('nav a').forEach(x => x.classList.remove('on'));
+  a.classList.add('on');
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('on'));
+  document.getElementById('p-' + a.dataset.p).classList.add('on');
+  if (a.dataset.p === 'overview') loadOverview();
+  if (a.dataset.p === 'assets') loadAssets();
+  if (a.dataset.p === 'exec') { loadTasks(); loadAssetPicker(); }
+  if (a.dataset.p === 'inspect') loadRuns();
+  if (a.dataset.p === 'alerts') loadAlerts();
+  if (a.dataset.p === 'logs') loadAssetPicker();
+  if (a.dataset.p === 'cicd') loadCicd();
+});
+
+async function loadOverview() {
+  try {
+    const d = await api('/api/dashboard/overview');
+    document.getElementById('sysline').textContent =
+      '数据库 ' + d.system.database + ' · Redis ' + (d.system.redis_available ? '已连接' : '不可用（降级）') +
+      ' · 执行模式 ' + d.system.async_mode;
+    document.getElementById('ov-cards').innerHTML = [
+      ['资产总数', d.assets.total, 'info'], ['在线', d.assets.online, 'ok'],
+      ['离线', d.assets.offline, d.assets.offline ? 'bad' : ''],
+      ['今日任务', d.tasks.today, 'info'], ['进行中', d.tasks.running, d.tasks.running ? 'warn' : ''],
+      ['未恢复告警', d.alerts.firing, d.alerts.firing ? 'bad' : 'ok'],
+      ['巡检批次', d.inspection.total, 'info'],
+      ['AI 诊断覆盖', d.alerts.diagnose_rate + '%', 'info']
+    ].map(([t, n, c]) => `<div class="stat"><div class="n ${c}">${n}</div><div class="t">${t}</div></div>`).join('');
+
+    document.getElementById('ov-disk').innerHTML = d.top_disk.length
+      ? '<table><tr><th>主机</th><th>IP</th><th>磁盘使用率</th></tr>' + d.top_disk.map(x =>
+        `<tr><td>${esc(x.hostname)}</td><td>${esc(x.ip)}</td><td>${lvl(x.used_percent >= 80 ? 'warn' : 'ok')} ${x.used_percent}%</td></tr>`).join('') + '</table>'
+      : '<div class="empty">还没有在线资产，先到「资产管理」录入并探测</div>';
+
+    document.getElementById('ai-hint').textContent = d.llm.hint;
+    document.getElementById('ov-ai').innerHTML =
+      `<div>当前模式：<b>${d.llm.mode}</b>　模型：${esc(d.llm.model)}　接口：${esc(d.llm.base_url)}</div>
+       <div class="hint" style="margin-top:8px">未配置 Key 时自动降级为内置规则库，功能链路依然完整，只是结论来源不同（用 mode 字段标识）。</div>`;
+  } catch (e) { toast('总览加载失败：' + e.message, 'err'); }
+}
+
+async function loadAssets() {
+  try {
+    const d = await api('/api/assets?page_size=100');
+    const t = document.getElementById('asset-table');
+    if (!d.items.length) { t.innerHTML = '<tr><td><div class="empty">还没有资产，点上方「+ 录入资产」</div></td></tr>'; return; }
+    t.innerHTML = '<tr><th>主机</th><th>IP</th><th>环境</th><th>配置</th><th>磁盘</th><th>状态</th><th>操作</th></tr>' +
+      d.items.map(a => `<tr>
+        <td>${esc(a.hostname || '-')}</td>
+        <td>${esc(a.ip)}<div class="hint">${esc(a.os_version || '未探测')}</div></td>
+        <td>${esc(a.env)}<div class="hint">${esc(a.purpose || '')}</div></td>
+        <td>${a.cpu_cores || '-'} 核 / ${a.memory_mb || '-'} MB</td>
+        <td>${a.disk_used_percent ? a.disk_used_percent + '%' : '-'}</td>
+        <td>${lvl(a.status === 'online' ? 'ok' : (a.status === 'offline' ? 'critical' : 'info'))} ${a.status}</td>
+        <td>
+          <button class="ghost" onclick="probeOne(${a.id})">探测</button>
+          <button class="ghost" onclick="showChanges(${a.id})">变更记录</button>
+          <button class="ghost" onclick="delAsset(${a.id})">删除</button>
+        </td></tr>`).join('');
+    document.querySelectorAll('#lg-asset, #ex-assets').forEach(() => {});
+    loadAssetPicker(d.items);
+  } catch (e) { toast(e.message, 'err'); }
+}
+
+let ASSETS = [];
+function loadAssetPicker(items) {
+  const fill = (list) => {
+    ASSETS = list;
+    const sel = document.getElementById('lg-asset');
+    if (sel) sel.innerHTML = list.map(a => `<option value="${a.id}">${esc(a.hostname || a.ip)} (${esc(a.ip)})</option>`).join('');
+    const box = document.getElementById('ex-assets');
+    if (box) box.innerHTML = list.map(a =>
+      `<label class="hint" style="display:flex;align-items:center;gap:5px;background:var(--panel2);padding:5px 10px;border-radius:6px;border:1px solid var(--line)">
+        <input type="checkbox" class="ex-chk" value="${a.id}" style="width:auto"> ${esc(a.hostname || a.ip)}</label>`).join('');
+  };
+  if (items) { fill(items.filter(a => a.status === 'online')); return; }
+  api('/api/assets?page_size=100').then(d => fill(d.items.filter(a => a.status === 'online'))).catch(() => {});
+}
+function pickAll() { document.querySelectorAll('.ex-chk').forEach(c => c.checked = true); }
+
+function showAssetForm() {
+  openModal(`<h1>录入资产</h1>
+    <div class="row"><label>IP</label><input id="f-ip" placeholder="例如 10.0.0.21"></div>
+    <div class="row"><label>SSH 端口</label><input id="f-port" value="22"></div>
+    <div class="row"><label>用户名</label><input id="f-user" placeholder="root"></div>
+    <div class="row"><label>密码</label><input id="f-pwd" type="password" placeholder="仅存本地数据库，不会外传"></div>
+    <div class="row"><label>环境</label><input id="f-env" value="prod"></div>
+    <div class="row"><label>用途</label><input id="f-purpose" value="K8s 集群节点"></div>
+    <div style="display:flex;gap:8px;margin-top:16px"><button onclick="saveAsset()">保存并探测</button><button class="ghost" onclick="closeModal()">取消</button></div>`);
+}
+async function saveAsset() {
+  try {
+    const a = await api('/api/assets', {method: 'POST', body: {
+      ip: document.getElementById('f-ip').value.trim(),
+      ssh_port: +document.getElementById('f-port').value,
+      ssh_user: document.getElementById('f-user').value.trim(),
+      password: document.getElementById('f-pwd').value,
+      auth_type: 'password',
+      env: document.getElementById('f-env').value.trim(),
+      purpose: document.getElementById('f-purpose').value.trim()
+    }});
+    closeModal();
+    toast('资产已录入，开始探测…', 'ok');
+    await probeOne(a.id);
+  } catch (e) { toast(e.message, 'err'); }
+}
+async function probeOne(id) {
+  try {
+    const r = await api('/api/assets/' + id + '/probe', {method: 'POST'});
+    toast(r.ok ? `探测成功：${r.data.hostname || ''} ${r.data.os_version || ''}（${r.duration_ms}ms）` : '探测失败：' + (r.error || ''), r.ok ? 'ok' : 'err');
+    loadAssets();
+  } catch (e) { toast(e.message, 'err'); }
+}
+async function probeAll() {
+  try {
+    const r = await api('/api/assets/probe/batch', {method: 'POST', body: null});
+    toast(`批量探测完成：在线 ${r.online} / 共 ${r.total}`, 'ok');
+    loadAssets();
+  } catch (e) { toast(e.message, 'err'); }
+}
+async function delAsset(id) {
+  if (!confirm('确定删除该资产？（会被记录到变更审计）')) return;
+  try { await api('/api/assets/' + id, {method: 'DELETE'}); loadAssets(); toast('已删除', 'ok'); }
+  catch (e) { toast(e.message, 'err'); }
+}
+async function showChanges(id) {
+  try {
+    const rows = await api('/api/assets/' + id + '/changes');
+    openModal('<h1>资产变更记录</h1>' + (rows.length
+      ? '<table><tr><th>时间</th><th>字段</th><th>旧值</th><th>新值</th><th>操作人</th></tr>' + rows.map(r =>
+        `<tr><td>${esc(r.created_at)}</td><td>${esc(r.field)}</td><td>${esc(r.old_value)}</td><td>${esc(r.new_value)}</td><td>${esc(r.operator)}</td></tr>`).join('') + '</table>'
+      : '<div class="empty">暂无变更记录</div>'));
+  } catch (e) { toast(e.message, 'err'); }
+}
+
+let WS = null;
+async function runBatch() {
+  const ids = [...document.querySelectorAll('.ex-chk:checked')].map(c => +c.value);
+  if (!ids.length) return toast('请先勾选目标机器', 'err');
+  const cmd = document.getElementById('ex-cmd').value;
+  try {
+    const d = await api('/api/executor/tasks', {method: 'POST', body: {asset_ids: ids, command: cmd}});
+    toast(`任务已提交（#${d.task_id}），共 ${d.target_count} 台`, 'ok');
+    watchTask(d.task_id);
+    loadTasks();
+  } catch (e) {
+    if (String(e.message).includes('高危')) {
+      if (confirm(e.message + '\n\n确认继续执行吗？')) {
+        const d = await api('/api/executor/tasks', {method: 'POST', body: {asset_ids: ids, command: cmd, confirmed: true}});
+        watchTask(d.task_id); loadTasks();
+      }
+    } else toast(e.message, 'err');
+  }
+}
+function watchTask(id) {
+  if (WS) WS.close();
+  document.getElementById('ex-result').innerHTML = '<div class="empty">等待 worker 执行…</div>';
+  const proto = location.protocol === 'https:' ? 'wss://' : 'ws://';
+  WS = new WebSocket(proto + location.host + '/api/executor/ws/' + id + '?token=' + encodeURIComponent(TOKEN));
+  const rows = {};
+  WS.onmessage = (ev) => {
+    const d = JSON.parse(ev.data);
+    document.getElementById('ex-progress').textContent = `进度 ${d.done || 0}/${d.total || 0} · 成功 ${d.success || 0} · 失败 ${d.failed || 0}`;
+    if (d.latest) { rows[d.latest.asset_id] = d.latest; }
+    if (d.results) { d.results.forEach(r => rows[r.asset_id] = r); }
+    renderExecRows(rows);
+    if (d.event === 'done') { toast('任务执行完成', 'ok'); loadTasks(); loadAssets(); }
+  };
+  WS.onerror = () => toast('WebSocket 连接异常，可点历史里的任务查看结果', 'err');
+}
+function renderExecRows(rows) {
+  const list = Object.values(rows);
+  if (!list.length) return;
+  document.getElementById('ex-result').innerHTML = list.map(r => `
+    <div style="border:1px solid var(--line);border-radius:8px;margin-bottom:10px;overflow:hidden">
+      <div style="padding:8px 12px;background:var(--panel2);display:flex;justify-content:space-between">
+        <span>${esc(r.label || r.asset_id)} ${lvl(r.status)}</span>
+        <span class="hint">退出码 ${r.exit_code == null ? '-' : r.exit_code} · ${r.duration_ms || 0}ms</span>
+      </div>
+      <div style="padding:10px 12px">
+        ${r.error ? '<div class="hint" style="color:var(--red)">' + esc(r.error) + '</div>' : ''}
+        ${r.stdout ? '<pre>' + esc(r.stdout) + '</pre>' : ''}
+        ${r.stderr ? '<pre style="color:var(--amber)">' + esc(r.stderr) + '</pre>' : ''}
+      </div>
+    </div>`).join('');
+}
+async function loadTasks() {
+  try {
+    const d = await api('/api/executor/tasks?page_size=15');
+    const t = document.getElementById('task-table');
+    t.innerHTML = d.items.length
+      ? '<tr><th>ID</th><th>命令</th><th>目标</th><th>结果</th><th>操作人</th><th>时间</th><th></th></tr>' + d.items.map(x => `<tr>
+          <td>#${x.id}</td><td>${esc((x.command || '').slice(0, 40))}</td><td>${x.target_count} 台</td>
+          <td>${lvl(x.status)} <span class="hint">成功 ${x.success_count} / 失败 ${x.failed_count}</span></td>
+          <td>${esc(x.operator)}</td><td class="hint">${esc((x.created_at || '').replace('T', ' ').slice(0, 19))}</td>
+          <td><button class="ghost" onclick="watchTask(${x.id})">查看</button></td></tr>`).join('')
+      : '<tr><td><div class="empty">还没有执行记录</div></td></tr>';
+  } catch (e) {}
+}
+
+async function runInspect() {
+  try {
+    const d = await api('/api/inspection/runs', {method: 'POST', body: {}});
+    toast(`巡检已启动（#${d.run_id}），共 ${d.target_count} 台`, 'ok');
+    setTimeout(loadRuns, 1500);
+  } catch (e) { toast(e.message, 'err'); }
+}
+async function loadRuns() {
+  try {
+    const d = await api('/api/inspection/runs?page_size=15');
+    const t = document.getElementById('run-table');
+    t.innerHTML = d.items.length
+      ? '<tr><th>批次</th><th>模板</th><th>触发</th><th>检查项</th><th>结果</th><th>时间</th><th>报告</th></tr>' + d.items.map(r => `<tr>
+          <td>#${r.id}</td><td>${esc(r.template_name)}</td><td>${r.trigger === 'cron' ? '定时' : '手动'}</td>
+          <td>${r.total_items}</td>
+          <td>${lvl(r.status === 'finished' ? 'ok' : (r.status === 'failed' ? 'critical' : 'running'))}
+              <span class="hint">正常 ${r.ok_items} · 警告 ${r.warn_items} · 严重 ${r.critical_items}</span></td>
+          <td class="hint">${esc((r.finished_at || r.created_at || '').replace('T', ' ').slice(0, 19))}</td>
+          <td><button class="ghost" onclick="viewRun(${r.id})">详情</button>
+              ${r.report_path ? '<button class="ghost" onclick="window.open(\'/api/inspection/runs/' + r.id + '/report\',\'_blank\')">HTML 报告</button>' : ''}</td>
+        </tr>`).join('')
+      : '<tr><td><div class="empty">还没有巡检记录，点上方「立即巡检」</div></td></tr>';
+  } catch (e) {}
+}
+async function viewRun(id) {
+  try {
+    const d = await api('/api/inspection/runs/' + id);
+    const ai = d.ai_summary ? '<div class="ai-box">' + esc(d.ai_summary) + '</div>' : '<div class="hint">本次无异常项，未生成 AI 结论</div>';
+    openModal(`<h1>巡检详情 #${d.id} · ${esc(d.template_name)}</h1>
+      ${ai}
+      <table style="margin-top:14px"><tr><th>资产</th><th>检查项</th><th>等级</th><th>值</th><th>说明</th></tr>
+      ${d.results.map(r => `<tr><td>${esc(r.asset_label)}</td><td>${esc(r.item_name)}</td>
+        <td>${lvl(r.level)}</td><td>${esc(r.value)}</td><td>${esc(r.message)}</td></tr>`).join('')}</table>`);
+  } catch (e) { toast(e.message, 'err'); }
+}
+
+async function loadAlerts() {
+  try {
+    const s = await api('/api/alerts/stats');
+    document.getElementById('al-cards').innerHTML = [
+      ['今日告警', s.today_total, 'info'], ['未恢复', s.firing, s.firing ? 'bad' : 'ok'],
+      ['累计', s.total, 'info'], ['AI 已诊断', s.diagnosed, 'ok'], ['诊断覆盖率', s.diagnose_rate + '%', 'info']
+    ].map(([t, n, c]) => `<div class="stat"><div class="n ${c}">${n}</div><div class="t">${t}</div></div>`).join('');
+
+    const d = await api('/api/alerts?page_size=20');
+    const t = document.getElementById('alert-table');
+    t.innerHTML = d.items.length
+      ? '<tr><th>主机</th><th>告警</th><th>级别</th><th>重复</th><th>AI 根因</th><th>状态</th><th></th></tr>' + d.items.map(a => `<tr>
+          <td>${esc(a.hostname)}</td>
+          <td>${esc(a.alert_name)}<div class="hint">${esc(a.metric)}</div></td>
+          <td>${lvl(a.severity === 'critical' ? 'critical' : (a.severity === 'warning' ? 'warn' : 'info'))} ${esc(a.severity)}</td>
+          <td>${a.repeat_count}</td>
+          <td>${esc((a.ai_root_cause || '').slice(0, 50)) || '<span class="hint">未诊断</span>'}
+              <div class="hint">${a.ai_mode ? '来源：' + (a.ai_mode === 'llm' ? '大模型' : '规则库') : ''}</div></td>
+          <td>${lvl(a.status === 'firing' ? 'critical' : 'ok')} ${esc(a.status)}</td>
+          <td><button class="ghost" onclick="viewAlert(${a.id})">详情</button></td></tr>`).join('')
+      : '<tr><td><div class="empty">暂无告警，可点「生成模拟告警」体验去重与 AI 诊断</div></td></tr>';
+  } catch (e) {}
+}
+async function mockAlert() {
+  try { const r = await api('/api/alerts/mock?count=4', {method: 'POST', body: {}});
+    toast(`已注入 ${r.total} 条告警：新建 ${r.created} · 去重 ${r.deduped}`, 'ok'); loadAlerts(); }
+  catch (e) { toast(e.message, 'err'); }
+}
+async function viewAlert(id) {
+  try {
+    const a = await api('/api/alerts/' + id);
+    openModal(`<h1>${esc(a.alert_name)} · ${esc(a.hostname)}</h1>
+      <div class="hint" style="margin:8px 0">${esc(a.summary)}</div>
+      <div>${esc(a.description)}</div>
+      <div class="ai-box"><b>AI 根因：</b>${esc(a.ai_root_cause || '（未诊断，点下方按钮）')}
+
+<b>处置建议：</b>
+${esc(a.ai_suggestion || '')}
+<span class="hint">来源：${a.ai_mode === 'llm' ? '大模型' : (a.ai_mode === 'rule' ? '内置规则库' : '-')}</span></div>
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button onclick="reDiagnose(${a.id})">重新诊断</button>
+        <button class="ghost" onclick="closeModal()">关闭</button></div>`);
+  } catch (e) { toast(e.message, 'err'); }
+}
+async function reDiagnose(id) {
+  try { const r = await api('/api/alerts/' + id + '/diagnose', {method: 'POST', body: {}});
+    toast(r.llm_configured ? '大模型诊断完成' : '未配置 Key，已用规则库给出建议', 'ok');
+    closeModal(); loadAlerts(); }
+  catch (e) { toast(e.message, 'err'); }
+}
+
+async function analyzeRemote() {
+  const sel = document.getElementById('lg-asset');
+  if (!sel.value) return toast('请先录入并探测资产', 'err');
+  try {
+    const d = await api('/api/logs/remote', {method: 'POST', body: {
+      asset_id: +sel.value, remote_path: document.getElementById('lg-path').value, diagnose: true}});
+    renderLog(d);
+  } catch (e) { toast(e.message, 'err'); }
+}
+async function demoLog() {
+  try {
+    const s = await api('/api/logs/demo-samples');
+    const d = await api('/api/logs/inline', {method: 'POST', body: {text: s.text, slow_threshold: 1.0, diagnose: true, source: s.source}});
+    renderLog(d);
+  } catch (e) { toast(e.message, 'err'); }
+}
+function renderLog(d) {
+  const a = d.analysis;
+  let html = '';
+  if (a.format === 'nginx') {
+    html += `<div class="cards">
+      <div class="stat"><div class="n info">${a.matched_lines}</div><div class="t">解析行数</div></div>
+      <div class="stat"><div class="n bad">${(a.slow_requests || []).length}</div><div class="t">慢请求(≥${a.slow_threshold}s)</div></div>
+      <div class="stat"><div class="n warn">${Object.keys(a.status_distribution || {}).length}</div><div class="t">状态码种类</div></div></div>
+      <table><tr><th>Top IP</th><th>次数</th></tr>${(a.top_ips || []).slice(0, 8).map(([ip, n]) => `<tr><td>${esc(ip)}</td><td>${n}</td></tr>`).join('')}</table>
+      <h2 style="margin:16px 0 8px">慢请求明细</h2>
+      <table><tr><th>URL</th><th>IP</th><th>状态码</th><th>耗时(s)</th></tr>${(a.slow_requests || []).map(r =>
+        `<tr><td>${esc(r.url)}</td><td>${esc(r.ip)}</td><td>${esc(r.status)}</td><td>${r.request_time}</td></tr>`).join('')}</table>`;
+  } else {
+    html += `<div class="cards">
+      <div class="stat"><div class="n info">${a.total_lines}</div><div class="t">总行数</div></div>
+      <div class="stat"><div class="n bad">${a.error_lines}</div><div class="t">错误行数</div></div>
+      <div class="stat"><div class="n warn">${a.unique_error_types}</div><div class="t">归一化后错误种类</div></div></div>
+      <table><tr><th>次数</th><th>归一化骨架</th><th>原始样本</th></tr>${(a.top_errors || []).map(x =>
+        `<tr><td>${x.count}</td><td class="hint">${esc(x.normalized.slice(0, 80))}</td><td>${esc(x.sample.slice(0, 120))}</td></tr>`).join('')}</table>`;
+  }
+  if (d.ai) html += `<div class="ai-box"><b>AI 根因：</b>${esc(d.ai.root_cause || '')}
+
+<b>处置建议：</b>
+${esc((d.ai.suggestions || []).map(s => `${s.step}. ${s.action}${s.risk && s.risk !== 'low' ? ' [风险:' + s.risk + ']' : ''}`).join('\n'))}
+<span class="hint">来源：${d.ai.mode === 'llm' ? '大模型' : '内置规则库'}</span></div>`;
+  document.getElementById('lg-result').innerHTML = html;
+}
+
+async function loadCicd() {
+  try {
+    const s = await api('/api/cicd/status');
+    document.getElementById('ci-status').innerHTML =
+      `<div>GitLab：<b>${s.gitlab.configured ? '已配置 ' + esc(s.gitlab.base) : '未配置'}</b></div>
+       <div style="margin-top:6px">Jenkins：<b>${s.jenkins.configured ? '已配置 ' + esc(s.jenkins.base) : '未配置'}</b></div>
+       <div class="hint" style="margin-top:8px">未配置时该模块优雅关闭，不影响其它功能。</div>`;
+    try {
+      const g = await api('/api/cicd/gitlab/pipelines');
+      document.getElementById('ci-gitlab').innerHTML = (g.items && g.items.length)
+        ? '<table><tr><th>ID</th><th>分支</th><th>提交</th><th>状态</th></tr>' + g.items.map(p =>
+          `<tr><td>${p.id}</td><td>${esc(p.ref)}</td><td>${esc(p.sha)}</td><td>${lvl(p.status === 'success' ? 'ok' : (p.status === 'failed' ? 'critical' : 'running'))} ${esc(p.status)}</td></tr>`).join('') + '</table>'
+        : '<div class="empty">' + esc(g.hint || '暂无流水线数据') + '</div>';
+    } catch (e) { document.getElementById('ci-gitlab').innerHTML = '<div class="empty">' + esc(e.message) + '</div>'; }
+    try {
+      const j = await api('/api/cicd/jenkins/jobs');
+      document.getElementById('ci-jenkins').innerHTML = (j.items && j.items.length)
+        ? '<table><tr><th>作业</th><th>最近构建</th><th>结果</th></tr>' + j.items.map(x =>
+          `<tr><td>${esc(x.name)}</td><td>#${esc(x.last_build)}</td><td>${esc(x.result || x.color)}</td></tr>`).join('') + '</table>'
+        : '<div class="empty">' + esc(j.hint || '暂无 Jenkins 作业') + '</div>';
+    } catch (e) { document.getElementById('ci-jenkins').innerHTML = '<div class="empty">' + esc(e.message) + '</div>'; }
+  } catch (e) { toast(e.message, 'err'); }
+}
+
+function openModal(html) {
+  const m = document.getElementById('modal');
+  m.innerHTML = '<div class="modal" onclick="if(event.target===this)closeModal()"><div class="card">' + html + '</div></div>';
+}
+function closeModal() { document.getElementById('modal').innerHTML = ''; }
+
+if (TOKEN) { enterApp(); }
+</script>
+</body>
+</html>
