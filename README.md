@@ -1,8 +1,38 @@
+<div align="center">
+
 # SmartOps Assistant
 
-轻量级智能运维平台。**Agentless（无代理）**架构 —— 被管服务器不需要装任何 agent，只要 SSH 可达即可纳管。
+**轻量级智能运维平台 · Agentless（无代理）架构**
 
-覆盖：资产管理 · 批量执行 · 自动化巡检 · 告警聚合 · 日志分析 · CI/CD 集成 · AI 智能诊断。
+被管服务器**不需要安装任何 agent**，只要 SSH 可达即可纳管。
+
+![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)
+![Celery](https://img.shields.io/badge/Celery-5.x-37814A?logo=celery&logoColor=white)
+![Redis](https://img.shields.io/badge/Redis-7.x-DC382D?logo=redis&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
+![Code](https://img.shields.io/badge/代码-4659%20行-blueviolet)
+![API](https://img.shields.io/badge/接口-58%20个-blue)
+![Tables](https://img.shields.io/badge/数据表-11%20张-orange)
+
+**实测**：创建任务接口 **49 ms** 返回，同一任务实跑 **8594 ms**（相差约 **175 倍**）·
+纳管自建 3 节点 K8s 集群 · 巡检 18 项真实暴露磁盘 **84%** 超阈值 · 应用镜像 **376 MB**
+
+</div>
+
+---
+
+## 目录
+
+- [一、它解决什么问题](#一它解决什么问题)
+- [二、技术栈与选型理由](#二技术栈与选型理由)
+- [三、快速开始](#三快速开始)
+- [四、功能模块](#四功能模块)
+- [五、真实验证数据（不是模拟）](#五真实验证数据不是模拟)
+- [六、测试过程中修掉的真实缺陷](#六测试过程中修掉的真实缺陷)
+- [七、目录结构](#七目录结构)
+- [八、API](#八api)
+- [九、相关文档](#九相关文档)
 
 ---
 
@@ -30,6 +60,46 @@
 | 大模型 | OpenAI 兼容接口 | DeepSeek / 通义 / OpenAI 一套请求格式，靠 base_url + model 切换 |
 | 报告 | Jinja2 | 生成自带样式的 HTML 报告 |
 | 部署 | Docker Compose | nginx + app + worker + beat + redis 一键起（MySQL 可选），见「快速开始」|
+
+### 请求是怎么走的
+
+```mermaid
+flowchart LR
+    subgraph Browser["浏览器（原生 HTML 控制台）"]
+        UI["7 个页签<br/>资产 / 批量执行 / 巡检 / 告警 / 日志 / CI·CD / 用户"]
+    end
+
+    subgraph Runtime["Docker Compose 编排"]
+        NGINX["Nginx :80<br/>反代 + WebSocket 升级"]
+        APP["app（FastAPI :8100）<br/>58 个接口 · JWT/RBAC"]
+        WORKER["worker（Celery）<br/>批量执行 · 巡检"]
+        BEAT["beat<br/>定时调度"]
+        REDIS[("Redis<br/>任务队列 / 进度快照 / 告警去重")]
+        DB[("SQLite / MySQL<br/>11 张表")]
+    end
+
+    subgraph Managed["被管服务器（无需装 agent）"]
+        S1["node1"]
+        S2["node2"]
+        S3["nodeN"]
+    end
+
+    UI -->|HTTP / WS| NGINX
+    NGINX --> APP
+    APP -->|"① 扔任务进队列<br/>立即返回 task_id"| REDIS
+    REDIS -->|"② worker 取任务"| WORKER
+    BEAT -->|定时派活| REDIS
+    WORKER -->|"③ paramiko SSH 并发执行"| S1 & S2 & S3
+    WORKER -->|"④ 每跑完一台<br/>写进度快照"| REDIS
+    REDIS -->|"⑤ 每 500ms 读快照"| APP
+    APP -->|"⑥ WebSocket 逐台推送"| UI
+    APP --- DB
+    WORKER --- DB
+```
+
+> 关键在**虚线那一段的实线回路**：worker 每跑完一台就把进度写进 Redis，
+> app 每 500 ms 读一次快照推给浏览器，所以页面上的结果是**一条一条冒出来的**，
+> 不是等全部跑完才一次性刷出。这也意味着 Redis 挂了还能退化成查数据库，页面不会白屏。
 
 ---
 
@@ -255,3 +325,19 @@ smartops/
 | POST | `/api/alerts/mock` | 生成模拟告警（演示用）|
 | POST | `/api/logs/remote` | 拉取远程日志并分析 |
 | GET | `/api/dashboard/overview` | 首页总览 |
+
+---
+
+## 九、相关文档
+
+| 文档 | 适合谁看 | 内容 |
+|---|---|---|
+| **[项目介绍.md](项目介绍.md)** | 想了解这个项目的人 | 按软件工程结构组织：需求分析 → 系统设计 → 技术选型 → 代码实现 → 测试验证 → 部署 → 项目亮点 |
+| **[VSCODE部署教程.md](VSCODE部署教程.md)** | 要把它跑起来的人 | 12 步手把手，含 VS Code 断点调试（F5）配置与常见报错对照表 |
+| **[代码导读.md](代码导读.md)** | **代码基础薄弱、想读懂源码的人** | 先讲读本项目够用的 7 个 Python 语法，再按「一个请求怎么走完全程」逐段带注释讲解 |
+
+---
+
+## License
+
+本项目仅用于学习与技术展示，**未指定开源许可证**（如需二次使用请先联系作者）。
